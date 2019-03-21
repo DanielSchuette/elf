@@ -145,11 +145,11 @@ fn main() {
                             1 => PlatformBits::Bits32,
                             2 => PlatformBits::Bits64,
                             _ => {
-                                let msg = format!(
+                                let err = format!(
                                     "Cannot interpret platform code {}, expect 1 or 2",
                                     platform
                                 );
-                                panic!(msg);
+                                panic!(err);
                             }
                         };
                         header.platform_bits = platform;
@@ -161,11 +161,11 @@ fn main() {
                             1 => Endianness::Little,
                             2 => Endianness::Big,
                             _ => {
-                                let msg = format!(
+                                let err = format!(
                                     "Cannot interpret code for endianness {}, expect 1 or 2",
                                     endian
                                 );
-                                panic!(msg);
+                                panic!(err);
                             }
                         };
                         header.endianness = endian;
@@ -190,11 +190,11 @@ fn main() {
                             3 => ElfType::Shared,
                             4 => ElfType::Core,
                             _ => {
-                                let msg = format!(
+                                let err = format!(
                                     "Cannot interpret file type {}, expect one of 1-4",
                                     elf_type
                                 );
-                                panic!(msg);
+                                panic!(err);
                             }
                         };
                         header.elf_type = elf_type;
@@ -214,11 +214,11 @@ fn main() {
                             0x3e => InstructionSet::X86_64,
                             0xb7 => InstructionSet::AArch64,
                             _ => {
-                                let msg = format!(
+                                let err = format!(
                                     "Cannot interpret unknown instruction set code {}",
                                     iset
                                 );
-                                panic!(msg);
+                                panic!(err);
                             }
                         };
                         header.instruction_set = iset;
