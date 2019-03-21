@@ -1,92 +1,23 @@
 /*
  * TEMP_NAME is a command line utility that reads the binary elf format.
  * FIXME: Enable all linter flags before deployment.
+ *
+ * Author: Daniel Schuette (d.schuette@online.de)
+ * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  */
 #![allow(dead_code)]
 #![allow(unused)]
+
+mod parser;
+
 use std::fs;
 use std::io::prelude::*;
 use std::str;
 
+use parser::elf_header;
+
 const BUF_SIZE: usize = 4096;
-const ELF_PATH: &str = "../data/elf";
-const ELF_HEADER_LEN: u64 = 1;
-const ELF_MAGIC_NUM: u8 = 0x7f;
-const ELF_NAME: &str = "ELF";
-
-#[derive(Debug)]
-enum PlatformBits {
-    Bits64,
-    Bits32,
-    Unknown,
-}
-
-#[derive(Debug)]
-enum Endianness {
-    Little,
-    Big,
-    Unknown,
-}
-
-#[derive(Debug)]
-enum ElfType {
-    Relocatable,
-    Executable,
-    Shared,
-    Core,
-    Unknown,
-}
-
-#[derive(Debug)]
-enum InstructionSet {
-    NoSpecific,
-    Sparc,
-    X86,
-    MIPS,
-    PowerPC,
-    ARM,
-    SuperH,
-    IA64,
-    X86_64,
-    AArch64,
-}
-
-// Header data is parsed into and available through this struct.
-struct ElfHeader {
-    elf_type: ElfType,
-    platform_bits: PlatformBits,
-    endianness: Endianness,
-    version: u8,
-    header_version: u8,
-    abi: u8, /* 0 for System V, maybe others */
-    instruction_set: InstructionSet,
-}
-
-impl ElfHeader {
-    // create a new `ElfHeader' struct with default values
-    fn new() -> ElfHeader {
-        ElfHeader {
-            elf_type: ElfType::Unknown,
-            platform_bits: PlatformBits::Unknown,
-            endianness: Endianness::Unknown,
-            version: 0,
-            header_version: 0,
-            abi: 0,
-            instruction_set: InstructionSet::NoSpecific,
-        }
-    }
-
-    // pretty-print an `ElfHeader' struct, mainly for debugging
-    fn print(&self) {
-        println!("Platform: {:?}", self.platform_bits);
-        println!("Endianness: {:?}", self.endianness);
-        println!("ELF version: {:?}", self.version);
-        println!("Header version: {:?}", self.header_version);
-        println!("Operating System ABI: {:?}", self.abi);
-        println!("Type: {:?}", self.elf_type);
-        println!("Instruction set: {:?}", self.instruction_set);
-    }
-}
+const ELF_PATH: &str = "../data/elf"; /* FIXME: get path via cli soon */
 
 fn main() {
     // open elf file and access metadata to verify correct
@@ -95,7 +26,7 @@ fn main() {
     let metadata = f.metadata().expect("Cannot read file metadata");
     let file_len = metadata.len();
 
-    if (!metadata.is_file()) || (file_len < ELF_HEADER_LEN) {
+    if (!metadata.is_file()) || (file_len < parser::ELF_HEADER_LEN) {
         panic!(format!("{} is not a file or empty.", ELF_PATH));
     }
 
@@ -105,7 +36,7 @@ fn main() {
     let mut bytes_read = 1; /* bytes read from file during last read */
     let mut bc = 0; /* bytes consumed during parsing */
 
-    let mut header: ElfHeader = ElfHeader::new();
+    let mut header: parser::ElfHeader = parser::ElfHeader::new();
 
     while bytes_read > 0 {
         bytes_read = read_into_buf(&mut f, &mut buf);
@@ -120,30 +51,32 @@ fn main() {
                     //
                     0 => {
                         // every valid elf file starts with magic number
-                        if buf[bc] != ELF_MAGIC_NUM {
+                        if buf[bc] != parser::ELF_MAGIC_NUM {
                             let err = format!(
                                 "Did not find magic number {}, found {} instead.",
-                                ELF_MAGIC_NUM, buf[bc]
+                                parser::ELF_MAGIC_NUM,
+                                buf[bc]
                             );
                             panic!(err);
                         }
                         // the next 3 bytes must be ascii chars `ELF'
                         let elf_in_ascii = str::from_utf8(&buf[bc + 1..bc + 4])
                             .expect("Cannot read `ELF' string in header.");
-                        if elf_in_ascii != ELF_NAME {
+                        if elf_in_ascii != parser::ELF_NAME {
                             let err = format!(
                                 "Did not find {} string in header, found {} instead",
-                                ELF_NAME, elf_in_ascii
+                                parser::ELF_NAME,
+                                elf_in_ascii
                             );
                             panic!(err);
                         }
-                        bc += ELF_NAME.len() + 1; /* consume bytes */
+                        bc += parser::ELF_NAME.len() + 1; /* consume bytes */
                     }
                     4 => {
                         let platform = buf[bc];
                         let platform = match platform {
-                            1 => PlatformBits::Bits32,
-                            2 => PlatformBits::Bits64,
+                            1 => parser::PlatformBits::Bits32,
+                            2 => parser::PlatformBits::Bits64,
                             _ => {
                                 let err = format!(
                                     "Cannot interpret platform code {}, expect 1 or 2",
@@ -158,8 +91,8 @@ fn main() {
                     5 => {
                         let endian = buf[bc];
                         let endian = match endian {
-                            1 => Endianness::Little,
-                            2 => Endianness::Big,
+                            1 => parser::Endianness::Little,
+                            2 => parser::Endianness::Big,
                             _ => {
                                 let err = format!(
                                     "Cannot interpret code for endianness {}, expect 1 or 2",
@@ -185,10 +118,10 @@ fn main() {
                     16 => {
                         let elf_type = buf[bc];
                         let elf_type = match elf_type {
-                            1 => ElfType::Relocatable,
-                            2 => ElfType::Executable,
-                            3 => ElfType::Shared,
-                            4 => ElfType::Core,
+                            1 => parser::ElfType::Relocatable,
+                            2 => parser::ElfType::Executable,
+                            3 => parser::ElfType::Shared,
+                            4 => parser::ElfType::Core,
                             _ => {
                                 let err = format!(
                                     "Cannot interpret file type {}, expect one of 1-4",
@@ -203,16 +136,16 @@ fn main() {
                     18 => {
                         let iset = buf[bc];
                         let iset = match iset {
-                            0x00 => InstructionSet::NoSpecific,
-                            0x02 => InstructionSet::Sparc,
-                            0x03 => InstructionSet::X86,
-                            0x08 => InstructionSet::MIPS,
-                            0x14 => InstructionSet::PowerPC,
-                            0x28 => InstructionSet::ARM,
-                            0x2a => InstructionSet::SuperH,
-                            0x32 => InstructionSet::IA64,
-                            0x3e => InstructionSet::X86_64,
-                            0xb7 => InstructionSet::AArch64,
+                            0x00 => parser::InstructionSet::NoSpecific,
+                            0x02 => parser::InstructionSet::Sparc,
+                            0x03 => parser::InstructionSet::X86,
+                            0x08 => parser::InstructionSet::MIPS,
+                            0x14 => parser::InstructionSet::PowerPC,
+                            0x28 => parser::InstructionSet::ARM,
+                            0x2a => parser::InstructionSet::SuperH,
+                            0x32 => parser::InstructionSet::IA64,
+                            0x3e => parser::InstructionSet::X86_64,
+                            0xb7 => parser::InstructionSet::AArch64,
                             _ => {
                                 let err = format!(
                                     "Cannot interpret unknown instruction set code {}",
