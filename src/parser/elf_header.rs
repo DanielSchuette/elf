@@ -10,9 +10,23 @@ use std::str;
 
 use crate::parser;
 
+const PARSE_LIMIT_MIN: usize = 0;
+const PARSE_LIMIT_MAX: usize = 24;
+
 // TODO: Documentation.
 // FIXME: Generalize function with respect to smaller buffers.
-pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> usize {
+pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> isize {
+    /*
+     * Stop early if called with `bc' outside the range of this function.
+     * If the last condition is not matched (i.e. 20 < `bc' < 25), -1 is
+     * returned to indicate to the caller that this fn is not responsible
+     * for parsing the current byte offset.
+     */
+    if (bc > PARSE_LIMIT_MAX) || (bc < PARSE_LIMIT_MIN) {
+        return -1;
+    }
+
+    // match the user-provided bytecode with the appropriate action
     match bc {
         0 => {
             // every valid elf file starts with magic number
@@ -35,7 +49,7 @@ pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> usize {
                 );
                 panic!(err);
             }
-            parser::ELF_NAME.len() + 1 /* return bytes to consume */
+            (parser::ELF_NAME.len() + 1) as isize /* return bytes to consume */
         }
         4 => {
             let platform = buf[bc];

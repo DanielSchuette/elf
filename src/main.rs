@@ -18,7 +18,6 @@ pub mod parser;
 
 use std::fs;
 use std::io::prelude::*;
-use std::str;
 
 use parser::elf_header;
 use parser::elf_header_32_bit;
@@ -51,13 +50,30 @@ fn main() {
 
         /*
          * Parse header. Must be read in a large chunk of e.g. 4096 bytes,
-         * otherwise multi-byte data might not be read properly.
+         * otherwise multi-byte data might not be read properly. Parsing
+         * functions return -1 early if they are not responsible for a certain
+         * offset `bc'. This behavior protects against wrong increments and
+         * lossy parsing.
          */
         if bytes_total == 0 {
             while bc < buf.len() {
-                bc += elf_header::parse(&buf, bc, &mut header);
+                let r = elf_header::parse(&buf, bc, &mut header);
+
+                /*
+                 * FIXME: For debugging purposes, `bc' is incremented
+                 * anyways. Other parsing functions would set `r', too
+                 * and `bc' would ultimately be incremented because
+                 * every meaningful offset should have an associated
+                 * action during parsing.
+                 */
+                if r == -1 {
+                    bc += 1;
+                } else {
+                    bc += r as usize;
+                }
             }
         }
+
         print_buffer(&buf[bc..]); /* if everything is consumed, print nothing */
         bytes_total += bytes_read;
     }
