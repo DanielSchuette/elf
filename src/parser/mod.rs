@@ -87,3 +87,8 @@ impl ElfHeader {
         println!("Instruction set: {:?}", self.instruction_set);
     }
 }
+
+// Add padding to a counter. For code readability.
+fn skip_padding(counter: &mut usize, padding: usize) {
+    *counter += padding;
+}
