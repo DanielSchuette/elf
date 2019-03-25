@@ -51,6 +51,28 @@ pub enum InstructionSet {
     AArch64,
 }
 
+#[derive(Debug)]
+pub enum TargetABI {
+    NoSpecific,
+    SystemV,
+    HPUX,
+    NetBSD,
+    Linux,
+    GNUHurd,
+    Solaris,
+    AIX,
+    IRIX,
+    FreeBSD,
+    Tru64,
+    NovellModesto,
+    OpenBSD,
+    OpenVMS,
+    NonStop,
+    AROS,
+    FenixOS,
+    CloudABI,
+}
+
 // Header data is parsed into and available through this struct.
 pub struct ElfHeader {
     pub elf_type: ElfType,
@@ -58,7 +80,7 @@ pub struct ElfHeader {
     pub endianness: Endianness,
     pub version: u32,
     pub header_version: u8,
-    pub abi: u8, /* 0 for System V standard, maybe others */
+    pub abi: TargetABI, /* usually set to 0=System V regardless of target */
     pub instruction_set: InstructionSet,
 
     // sizes of the following fields are platform dependent
@@ -84,7 +106,7 @@ impl ElfHeader {
                     endianness: Endianness::Unknown,
                     version: 0,
                     header_version: 0,
-                    abi: 0,
+                    abi: TargetABI::NoSpecific,
                     instruction_set: InstructionSet::NoSpecific,
                     flags: 0,
                     header_size: 0,

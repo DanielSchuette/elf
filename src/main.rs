@@ -28,8 +28,7 @@ const BUF_SIZE: usize = 4096;
 const ELF_PATH: &str = "../data/elf"; /* FIXME: get path via cli soon */
 
 fn main() {
-    // open elf file and access metadata to verify correct
-    // length and file type
+    // open elf file, get metadata to verify correct length and file type
     let mut f = fs::File::open(ELF_PATH).expect("Cannot open file");
     let metadata = f.metadata().expect("Cannot read file metadata");
     let file_size = metadata.len();
@@ -59,9 +58,11 @@ fn main() {
          */
         let buf_size = buf.len();
         while offset < buf_size {
-            // the `offset' is used to control the loop, the absolute position
-            // within the ELF file must be calculated using the iteration number
-            // and the constant buffer size
+            /*
+             * The `offset' is used to control the loop, the absolute position
+             * within the ELF file must be calculated using the iteration number
+             * and the constant buffer size.
+             */
             let position = offset + (iteration * BUF_SIZE);
             let mut status: isize;
 
@@ -77,8 +78,10 @@ fn main() {
                 continue;
             }
 
-            // apparently, `offset' couldn't be handled yet, keep cycling to
-            // recover eventually or consume the entire buffer and return
+            /*
+             * Apparently, `offset' couldn't be handled yet, keep cycling to
+             * recover eventually or consume the entire buffer and return.
+             */
             offset += 1;
         }
 

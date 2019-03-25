@@ -94,7 +94,35 @@ pub fn parse(buf: &[u8], offset: usize, position: usize,
             1
         }
         7 => {
-            header.abi = buf[offset];
+            let field_val = buf[offset];
+            let abi = match field_val {
+                0x00 => parser::TargetABI::SystemV,
+                0x01 => parser::TargetABI::HPUX,
+                0x02 => parser::TargetABI::NetBSD,
+                0x03 => parser::TargetABI::Linux,
+                0x04 => parser::TargetABI::GNUHurd,
+                0x06 => parser::TargetABI::Solaris,
+                0x07 => parser::TargetABI::AIX,
+                0x08 => parser::TargetABI::IRIX,
+                0x09 => parser::TargetABI::FreeBSD,
+                0x0a => parser::TargetABI::Tru64,
+                0x0b => parser::TargetABI::NovellModesto,
+                0x0c => parser::TargetABI::OpenBSD,
+                0x0d => parser::TargetABI::OpenVMS,
+                0x0e => parser::TargetABI::NonStop,
+                0x0f => parser::TargetABI::AROS,
+                0x10 => parser::TargetABI::FenixOS,
+                0x11 => parser::TargetABI::CloudABI,
+                _ => {
+                    let err = format!(
+                        "Cannot interpret code for endianness {}, expect 1 or 2",
+                        field_val
+                    );
+                    panic!(err);
+                }
+            };
+            header.abi = abi;
+
             1
         }
         8 => 8,
