@@ -6,58 +6,67 @@
  * Author: Daniel Schuette (d.schuette@online.de)
  * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  */
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use std::io::Cursor;
 use std::str;
 
 use crate::parser;
+use crate::utils;
 
-const PARSE_LIMIT_MIN: usize = 0;
-const PARSE_LIMIT_MAX: usize = 24;
+const PARSE_LIMIT_MAX: usize = 23;
 
-// TODO: Documentation.
+// `parse' takes a byte buffer and an `offset' into `buf'. It then
+// matches that value with the appropriate ELF section and adds the
+// interpreted data to the mutably borrowed `header' struct. The caller
+// has to make sure that no out-of-bounds access is performed on `buf'.
 // FIXME: Generalize function with respect to smaller buffers.
-pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> isize {
+// FIXME: Return a Result<usize, CustomErrorType> instead of an isize
+//        and panicking all the time.
+pub fn parse(buf: &[u8], offset: usize, position: usize,
+             header: &mut parser::ElfHeader)
+             -> isize {
     /*
-     * Stop early if called with `bc' outside the range of this function.
-     * If the last condition is not matched (i.e. 20 < `bc' < 25), -1 is
-     * returned to indicate to the caller that this fn is not responsible
-     * for parsing the current byte offset.
+     * Stop early if called with a `position' outside the range of this function
+     * (i.e. 20 < `offset' < 25), -1 is returned to indicate to the caller that
+     * this function is not responsible for parsing the current byte offset.
+     * FIXME: Idiomatic Rust returns an Option<usize> at this point.
      */
-    if (bc > PARSE_LIMIT_MAX) || (bc < PARSE_LIMIT_MIN) {
+    if position > PARSE_LIMIT_MAX {
         return -1;
     }
 
-    // match the user-provided bytecode with the appropriate action
-    match bc {
+    // match the user-provided position within the ELF file with the appropriate
+    // parsing action
+    match position {
         0 => {
             // every valid elf file starts with magic number
-            if buf[bc] != parser::ELF_MAGIC_NUM {
-                let err = format!(
-                    "Did not find magic number {}, found {} instead.",
-                    parser::ELF_MAGIC_NUM,
-                    buf[bc]
-                );
+            if buf[offset] != parser::ELF_MAGIC_NUM {
+                let err = format!("Did not find magic number {}, found {} instead.",
+                                  parser::ELF_MAGIC_NUM,
+                                  buf[offset]);
                 panic!(err);
             }
             // the next 3 bytes must be ascii chars `ELF'
-            let elf_in_ascii =
-                str::from_utf8(&buf[bc + 1..bc + 4]).expect("Cannot read `ELF' string in header.");
+            let elf_in_ascii = str::from_utf8(&buf[offset + 1..offset + 4])
+                .expect("Cannot read `ELF' string in header.");
             if elf_in_ascii != parser::ELF_NAME {
-                let err = format!(
-                    "Did not find {} string in header, found {} instead",
-                    parser::ELF_NAME,
-                    elf_in_ascii
-                );
+                let err =
+                    format!("Did not find {} string in header, found {} instead",
+                            parser::ELF_NAME,
+                            elf_in_ascii);
                 panic!(err);
             }
             (parser::ELF_NAME.len() + 1) as isize /* return bytes to consume */
         }
         4 => {
-            let platform = buf[bc];
+            let platform = buf[offset];
             let platform = match platform {
                 1 => parser::PlatformBits::Bits32,
                 2 => parser::PlatformBits::Bits64,
                 _ => {
-                    let err = format!("Cannot interpret platform code {}, expect 1 or 2", platform);
+                    let err =
+                        format!("Cannot interpret platform code {}, expect 1 or 2",
+                                platform);
                     panic!(err);
                 }
             };
@@ -65,7 +74,7 @@ pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> isize {
             1
         }
         5 => {
-            let endian = buf[bc];
+            let endian = buf[offset];
             let endian = match endian {
                 1 => parser::Endianness::Little,
                 2 => parser::Endianness::Big,
@@ -81,35 +90,43 @@ pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> isize {
             1
         }
         6 => {
-            header.header_version = buf[bc];
+            header.header_version = buf[offset];
             1
         }
         7 => {
-            header.abi = buf[bc];
+            header.abi = buf[offset];
             1
         }
-        8 => {
-            // skip_padding(&mut bc, 8);
-            8
-        }
+        8 => 8,
         16 => {
-            let elf_type = buf[bc];
-            let elf_type = match elf_type {
+            let field_size = 2;
+            let mut reader = utils::read_bytes_into_cursor(buf, offset, field_size);
+
+            let field_val = utils::unwrap_endian_u16(header, &mut reader);
+
+            let elf_type = match field_val {
                 1 => parser::ElfType::Relocatable,
                 2 => parser::ElfType::Executable,
                 3 => parser::ElfType::Shared,
                 4 => parser::ElfType::Core,
                 _ => {
-                    let err = format!("Cannot interpret file type {}, expect one of 1-4", elf_type);
+                    let err =
+                        format!("Cannot interpret file type {:?}, expect one of 1-4",
+                                field_val);
                     panic!(err);
                 }
             };
             header.elf_type = elf_type;
-            2 /* second byte carries no information ? it's skipped */
+
+            field_size as isize
         }
         18 => {
-            let iset = buf[bc];
-            let iset = match iset {
+            let field_size = 2;
+            let mut reader = utils::read_bytes_into_cursor(buf, offset, field_size);
+
+            let field_val = utils::unwrap_endian_u16(header, &mut reader);
+
+            let iset = match field_val {
                 0x00 => parser::InstructionSet::NoSpecific,
                 0x02 => parser::InstructionSet::Sparc,
                 0x03 => parser::InstructionSet::X86,
@@ -121,24 +138,27 @@ pub fn parse(buf: &[u8], bc: usize, header: &mut parser::ElfHeader) -> isize {
                 0x3e => parser::InstructionSet::X86_64,
                 0xb7 => parser::InstructionSet::AArch64,
                 _ => {
-                    let err = format!("Cannot interpret unknown instruction set code {}", iset);
+                    let err =
+                        format!("Cannot interpret unknown instruction set code {}",
+                                field_val);
                     panic!(err);
                 }
             };
             header.instruction_set = iset;
-            2 /* again, no information in second byte ? */
+
+            field_size as isize
         }
         20 => {
-            // currently, only the first of the next 4 bytes encodes
-            // the elf version, but this might change in the future
-            header.version = buf[bc];
-            4 /* skip 4 bytes at once */
-        }
-        // TODO: at this point, platform-specific parsing must be
-        // done, because 32-bit headers are smaller then the 64-bit
-        // counterpart. Call specialized functions from here.
+            let field_size = 4;
+            let mut reader = utils::read_bytes_into_cursor(buf, offset, field_size);
 
-        // FIXME: for debugging, cycle to the end of the elf file
+            header.version = utils::unwrap_endian_u32(header, &mut reader);
+
+            field_size as isize
+        }
+
+        // ensure that the caller increments its offset by returning
+        // 1 if none of the conditions above is met
         _ => 1,
     }
 }
