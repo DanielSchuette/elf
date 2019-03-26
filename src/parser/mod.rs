@@ -80,17 +80,18 @@ pub enum TargetABI {
 
 // Header data is parsed into and available through this struct.
 pub struct ElfHeader {
+    pub file_size: u64,
     pub elf_type: ElfType,
     pub platform_bits: PlatformBits,
     pub endianness: Endianness,
     pub version: u32,
     pub header_version: u8,
-    pub abi: TargetABI, /* usually set to 0=System V regardless of target */
+    pub abi: TargetABI, /* usually 0=SystemV regardless of target */
     pub instruction_set: InstructionSet,
 
     // sizes of the following fields are platform dependent
-    pub flags: u32, /* TODO: not implemented, always 0 */
-    pub header_size: u16,
+    pub flags: u32,       /* TODO: not implemented, always 0 */
+    pub header_size: u16, /* 64 bytes (64-bit) or 52 bytes (32-bit) */
 
     pub prog_entry_pos: u64,  /* program entry position */
     pub prog_tbl_pos: u64,    /* program header table position */
@@ -106,7 +107,8 @@ pub struct ElfHeader {
 impl ElfHeader {
     // create a new `ElfHeader' struct with default values
     pub fn new() -> ElfHeader {
-        ElfHeader { elf_type: ElfType::Unknown,
+        ElfHeader { file_size: 0,
+                    elf_type: ElfType::Unknown,
                     platform_bits: PlatformBits::Unknown,
                     endianness: Endianness::Unknown,
                     version: 0,
@@ -127,6 +129,7 @@ impl ElfHeader {
 
     // pretty-print an `ElfHeader' struct, mainly for debugging
     pub fn print(&self) {
+        println!("File size: {:?}", self.file_size);
         println!("Platform: {:?}", self.platform_bits);
         println!("Endianness: {:?}", self.endianness);
         println!("ELF version: {:?}", self.version);
@@ -178,7 +181,6 @@ impl ElfHeader {
  * | 50-51  | 62-63  | Index in section header table with section names    |
  * | ------ | ------ | --------------------------------------------------- |
  */
-
 pub fn get_header(mut file: &mut std::fs::File) -> ElfHeader {
     // set up a byte buffer and a default header struct
     let mut buf = [0; ELF_HEADER_LEN];
@@ -201,6 +203,9 @@ pub fn get_header(mut file: &mut std::fs::File) -> ElfHeader {
         }
     }
 
-    print_buffer(&buf[..]); /* FIXME: debug mode only (will be CLI feature) */
+    if super::DEBUG {
+        print_buffer(&buf[..]); /* FIXME: will be CLI feature */
+    }
+
     header
 }

@@ -9,7 +9,7 @@ use crate::parser;
 use crate::utils;
 
 const PARSE_LIMIT_MIN: usize = 24;
-const PARSE_LIMIT_MAX: usize = 51;
+const PARSE_LIMIT_MAX: usize = 63; /* with 51, an endless loop is produced */
 
 // The same signature as elf_header::parse(). See there for detailed docs.
 pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
