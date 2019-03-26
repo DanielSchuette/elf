@@ -18,12 +18,9 @@ use crate::parser;
 pub fn read_bytes_into_cursor(buf: &[u8], offset: usize, size: usize)
                               -> Cursor<Vec<u8>> {
     let mut fields = vec![];
-    let field_size = 8;
-
-    for i in 0..field_size {
+    for i in 0..size {
         fields.push(buf[offset + i]);
     }
-
     Cursor::new(fields)
 }
 
@@ -78,6 +75,7 @@ pub fn print_buffer(buf: &[u8]) {
             print!("{} ", byte);
         }
     }
+    println!("");
 }
 
 // Panic if the `total' and `file_len' are not equal.
