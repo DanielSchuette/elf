@@ -35,5 +35,7 @@ fn main() {
 
     // parse and print ELF header
     let header = get_header(&mut f);
-    header.print(); /* print parsed header */
+    header.print();
+
+    // TODO: parse additional sections based on header data
 }
