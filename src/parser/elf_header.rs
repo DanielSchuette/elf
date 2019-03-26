@@ -15,13 +15,16 @@ use crate::utils;
 
 const PARSE_LIMIT_MAX: usize = 23;
 
-// `parse' takes a byte buffer and an `offset' into `buf'. It then
-// matches that value with the appropriate ELF section and adds the
-// interpreted data to the mutably borrowed `header' struct. The caller
-// has to make sure that no out-of-bounds access is performed on `buf'.
-// FIXME: Generalize function with respect to smaller buffers.
-// FIXME: Return a Result<usize, CustomErrorType> instead of an isize
-//        and panicking all the time.
+/*
+ * Takes a byte buffer and an `offset' into that buffer. The `offset' is then
+ * matched with the appropriate ELF header field and the relevant data is parsed
+ * and add to the mutably borrowed `header' struct. The caller has to ensure
+ * that no out-of-bounds access is performed on `buf'. If `offset' cannot be
+ * handled by this function, `None' is returned. Otherwise, an `Option<usize>'
+ * is returned which can be used by the caller to increment `offset' and call
+ * `parse' again. The platform-dependent sections of an ELF header are handled
+ * by `parse' functions in `./elf_header_32/64_bit.rs'.
+ */
 pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
              -> Option<usize> {
     /*
@@ -33,8 +36,7 @@ pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
         return None;
     }
 
-    // match the user-provided position within the ELF file with the appropriate
-    // parsing action
+    // match the offset with the appropriate parsing action
     match offset {
         0 => {
             // every valid elf file starts with magic number

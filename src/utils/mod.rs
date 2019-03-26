@@ -13,8 +13,10 @@ use std::io::Cursor;
 
 use crate::parser;
 
-// Read `size' bytes from a `buf' into a cursor for further manipulation, e.g.
-// the conversion into u64. Reading starts at `offset'.
+/*
+ * Read `size' bytes from a `buf' into a cursor for further manipulation, e.g.
+ * the conversion into u64. Reading starts at `offset'.
+ */
 pub fn read_bytes_into_cursor(buf: &[u8], offset: usize, size: usize)
                               -> Cursor<Vec<u8>> {
     let mut fields = vec![];
@@ -24,6 +26,12 @@ pub fn read_bytes_into_cursor(buf: &[u8], offset: usize, size: usize)
     Cursor::new(fields)
 }
 
+/*
+ * Convert a byte vector, wrapped in a `Cursor', to a `u16'. The vector must
+ * have a length of 2, otherwise this functions panics. The endianness is
+ * determined based on the endian field of the passed-in `header' struct.
+ * Similar functions for `u32' and `u64' conversion exists, too.
+ */
 pub fn unwrap_endian_u16(header: &parser::ElfHeader,
                          reader: &mut std::io::Cursor<Vec<u8>>)
                          -> u16 {
@@ -54,9 +62,11 @@ pub fn unwrap_endian_u64(header: &parser::ElfHeader,
     }
 }
 
-// Read as many bytes from `file' into `buf' as possible. The actual number is
-// limited by the length of `buf' and the number of bytes left in `file'. The
-// number of bytes read is then returned. This fn panics on errors.
+/*
+ * Read as many bytes from `file' into `buf' as possible. The actual number is
+ * limited by the length of `buf' and the number of bytes left in `file'. The
+ * number of bytes read is then returned. This fn panics on errors.
+ */
 pub fn read_into_buf(file: &mut fs::File, mut buf: &mut [u8]) -> usize {
     file.read(&mut buf).expect("Cannot read from file")
 }
