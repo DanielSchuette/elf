@@ -30,7 +30,9 @@ if [ "$SUCCESS" = 'false' ]; then
     cargo run -- --path data/elf_64bit
 fi
 
-# clean up `data/'
+# update dependency graph and clean up `data/'
+echo 'Creating updated dependency graph.'
+cargo deps | dot -Tpng > assets/deps.png
 echo 'Cleaning up.'
 cd data/ && make clean && cd ../ || exit 1
 exit 0
