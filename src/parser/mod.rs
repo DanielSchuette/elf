@@ -6,8 +6,7 @@
  * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  */
 pub mod elf_header;
-pub mod elf_header_32_bit;
-pub mod elf_header_64_bit;
+use elf_header::{bits_32, bits_64};
 
 use crate::utils::{print_buffer, read_into_buf, validate_read, Config};
 
@@ -105,7 +104,7 @@ pub struct ElfHeader {
 }
 
 impl ElfHeader {
-    // create a new `ElfHeader' struct with default values
+    // Create a new `ElfHeader' struct with default values.
     pub fn new() -> ElfHeader {
         ElfHeader { file_size: 0,
                     elf_type: ElfType::Unknown,
@@ -127,27 +126,50 @@ impl ElfHeader {
                     sec_tbl_names_pos: 0 }
     }
 
-    // pretty-print an `ElfHeader' struct, mainly for debugging
+    // Validate header length.
+    pub fn validate(&self) -> bool {
+        if self.platform_bits == PlatformBits::Bits64 {
+            if self.header_size != 0x40 {
+                return false;
+            }
+        } else if self.platform_bits == PlatformBits::Bits32 {
+            if self.header_size != 0x34 {
+                return false;
+            }
+        }
+        true
+    }
+
+    // Pretty-print struct as a table, mainly for debugging.
     pub fn print(&self) {
-        println!("File size: {:?}", self.file_size);
-        println!("Platform: {:?}", self.platform_bits);
-        println!("Endianness: {:?}", self.endianness);
-        println!("ELF version: {:?}", self.version);
-        println!("Header version: {:?}", self.header_version);
-        println!("Operating System ABI: {:?}", self.abi);
-        println!("Type: {:?}", self.elf_type);
-        println!("Instruction set: {:?}", self.instruction_set);
-        println!("Flags: {:?}", self.flags);
-        println!("Header size: {:?}", self.header_size);
-        println!("Program entry position: {:?}", self.prog_entry_pos);
-        println!("Program header table position: {:?}", self.prog_tbl_pos);
-        println!("Section header table position: {:?}", self.sec_tbl_pos);
-        println!("Program header entry size: {:?}", self.prog_size_hentr);
-        println!("Number of program header entries: {:?}", self.prog_no_hentr);
-        println!("Section header entry size: {:?}", self.sec_size_hentr);
-        println!("Number of section header entries: {:?}", self.sec_no_entr);
-        println!("Index of section names in section header: {:?}",
+        println!("+-----------------------------------------------+---------------+");
+        println!("| File size\t\t\t\t\t| {:?}\t\t|", self.file_size);
+        println!("| Platform\t\t\t\t\t| {:?}\t|", self.platform_bits);
+        println!("| Endianness\t\t\t\t\t| {:?}\t|", self.endianness);
+        println!("| ELF version\t\t\t\t\t| {:?}\t\t|", self.version);
+        println!("| Header version\t\t\t\t| {:?}\t\t|", self.header_version);
+        println!("| Operating System ABI\t\t\t\t| {:?}\t|", self.abi);
+        println!("| Type\t\t\t\t\t\t| {:?}\t|", self.elf_type);
+        println!("| Instruction set\t\t\t\t| {:?}\t|", self.instruction_set);
+        println!("| Flags\t\t\t\t\t\t| {:?}\t\t|", self.flags);
+        println!("| Header size\t\t\t\t\t| {:?}\t\t|", self.header_size);
+        println!("| Program entry position\t\t\t| {:?}\t|",
+                 self.prog_entry_pos);
+        println!("| Program header table position\t\t\t| {:?}\t\t|",
+                 self.prog_tbl_pos);
+        println!("| Section header table position\t\t\t| {:?}\t\t|",
+                 self.sec_tbl_pos);
+        println!("| Program header entry size\t\t\t| {:?}\t\t|",
+                 self.prog_size_hentr);
+        println!("| Number of program header entries\t\t| {:?}\t\t|",
+                 self.prog_no_hentr);
+        println!("| Section header entry size\t\t\t| {:?}\t\t|",
+                 self.sec_size_hentr);
+        println!("| Number of section header entries\t\t| {:?}\t\t|",
+                 self.sec_no_entr);
+        println!("| Index of section names in section header\t| {:?}\t\t|",
                  self.sec_tbl_names_pos);
+        println!("+-----------------------------------------------+---------------+");
     }
 }
 
@@ -196,16 +218,16 @@ pub fn get_header(mut file: &mut std::fs::File, configs: &Config) -> ElfHeader {
         if let Some(inc) = elf_header::parse(&buf, offset, &mut header) {
             offset += inc;
         };
-        if let Some(inc) = elf_header_32_bit::parse(&buf, offset, &mut header) {
+        if let Some(inc) = bits_32::parse(&buf, offset, &mut header) {
             offset += inc;
         }
-        if let Some(inc) = elf_header_64_bit::parse(&buf, offset, &mut header) {
+        if let Some(inc) = bits_64::parse(&buf, offset, &mut header) {
             offset += inc;
         }
     }
 
     if configs.debug_mode {
-        print_buffer(&buf[..]);
+        print_buffer(&buf[..], "General header buffer");
     }
 
     header

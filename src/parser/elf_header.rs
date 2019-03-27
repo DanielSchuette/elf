@@ -6,12 +6,9 @@
  * Author: Daniel Schuette (d.schuette@online.de)
  * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  */
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use std::io::Cursor;
-use std::str;
-
 use crate::parser;
 use crate::utils;
+use std::str;
 
 const PARSE_LIMIT_MAX: usize = 23;
 
@@ -183,5 +180,240 @@ pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
             Some(field_size)
         }
         _ => Some(1),
+    }
+}
+
+pub mod bits_32 {
+
+    /*
+     * `elf_header_32_bit.rs' parses the platform-specific parts of the ELF header
+     * if a 32-bit file is detected.
+     */
+    use crate::parser;
+    use crate::utils;
+
+    const PARSE_LIMIT_MIN: usize = 24;
+    const PARSE_LIMIT_MAX: usize = 63; /* with 51, an endless loop is produced */
+
+    // The same signature as elf_header::parse(). See there for detailed docs.
+    pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
+                 -> Option<usize> {
+        if (offset < PARSE_LIMIT_MIN)
+           || (offset > PARSE_LIMIT_MAX)
+           || (header.platform_bits != parser::PlatformBits::Bits32)
+        {
+            return None;
+        }
+
+        match offset {
+            24 => {
+                let field_size = parser::FIELD_SIZE_32;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                header.prog_entry_pos =
+                    utils::unwrap_endian_u32(header, &mut reader) as u64;
+
+                Some(field_size)
+            }
+            28 => {
+                let field_size = parser::FIELD_SIZE_32;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                header.prog_tbl_pos = /* type cast because ElfHeader impl isn't generic */
+                utils::unwrap_endian_u32(header, &mut reader) as u64;
+
+                Some(field_size)
+            }
+            32 => {
+                let field_size = parser::FIELD_SIZE_32;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                header.sec_tbl_pos =
+                    utils::unwrap_endian_u32(header, &mut reader) as u64;
+
+                Some(field_size)
+            }
+            36 => Some(parser::FIELD_SIZE_32), /* TODO: currently, flags are ignored */
+            40 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.header_size = entry;
+
+                Some(field_size)
+            }
+            42 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.prog_size_hentr = entry;
+
+                Some(field_size)
+            }
+            44 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.prog_no_hentr = entry;
+
+                Some(field_size)
+            }
+            46 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.sec_size_hentr = entry;
+
+                Some(field_size)
+            }
+            48 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.sec_no_entr = entry;
+
+                Some(field_size)
+            }
+            50 => {
+                let field_size = 2;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.sec_tbl_names_pos = entry;
+
+                Some(field_size)
+            }
+            _ => Some(1),
+        }
+    }
+}
+
+pub mod bits_64 {
+    /*
+     * `elf_header_64_bit.rs' parses the platform-specific parts of the ELF header
+     * if a 64-bit file is detected.
+     */
+    use crate::parser;
+    use crate::utils;
+
+    const PARSE_LIMIT_MIN: usize = 24;
+    const PARSE_LIMIT_MAX: usize = 63;
+
+    // The same signature as elf_header::parse(). See there for detailed docs.
+    pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
+                 -> Option<usize> {
+        if (offset < PARSE_LIMIT_MIN)
+           || (offset > PARSE_LIMIT_MAX)
+           || (header.platform_bits != parser::PlatformBits::Bits64)
+        {
+            return None;
+        }
+
+        match offset {
+            24 => {
+                let field_size = parser::FIELD_SIZE_64;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                header.prog_entry_pos =
+                    utils::unwrap_endian_u64(header, &mut reader);
+
+                Some(field_size)
+            }
+            32 => {
+                let field_size = parser::FIELD_SIZE_64;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                header.prog_tbl_pos = utils::unwrap_endian_u64(header, &mut reader);
+
+                Some(field_size)
+            }
+            40 => {
+                let field_size = parser::FIELD_SIZE_64;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                header.sec_tbl_pos = utils::unwrap_endian_u64(header, &mut reader);
+
+                Some(field_size)
+            }
+            48 => Some(parser::FIELD_SIZE_32), /* TODO: don't ignore flags */
+            52 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.header_size = entry;
+
+                Some(field_size)
+            }
+            54 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.prog_size_hentr = entry;
+
+                Some(field_size)
+            }
+            56 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.prog_no_hentr = entry;
+
+                Some(field_size)
+            }
+            58 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.sec_size_hentr = entry;
+
+                Some(field_size)
+            }
+            60 => {
+                let field_size = parser::FIELD_SIZE_16;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.sec_no_entr = entry;
+
+                Some(field_size)
+            }
+            62 => {
+                let field_size = 2;
+                let mut reader =
+                    utils::read_bytes_into_cursor(buf, offset, field_size);
+
+                let entry = utils::unwrap_endian_u16(header, &mut reader);
+                header.sec_tbl_names_pos = entry;
+
+                Some(field_size)
+            }
+            _ => Some(1),
+        }
     }
 }

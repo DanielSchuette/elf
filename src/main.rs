@@ -10,9 +10,6 @@
  * TODO: Parse data section.
  * TODO: Parse text section (symbols?).
  */
-#![allow(dead_code)]
-#![allow(unused)]
-
 pub mod parser;
 pub mod utils;
 
@@ -58,10 +55,13 @@ fn main() {
         panic!(format!("{} is not a file or empty.", elf_path));
     }
 
-    // parse and print ELF header
+    // parse, validate and print ELF header
     let mut header = get_header(&mut f, &configs);
     header.file_size = file_size;
-    header.print();
+    assert!(header.validate());
+    if configs.debug_mode {
+        header.print();
+    }
 
     // TODO: parse additional sections based on header data
 }

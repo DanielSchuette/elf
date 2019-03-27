@@ -78,20 +78,17 @@ pub fn read_into_buf(file: &mut fs::File, mut buf: &mut [u8]) -> usize {
 }
 
 // Print the contents of a byte buffer. For debugging purposes.
-pub fn print_buffer(buf: &[u8]) {
+pub fn print_buffer(buf: &[u8], title: &str) {
+    println!("{}:", title);
     for byte in buf.iter() {
         if byte.is_ascii_alphabetic() {
             let c = *byte as char;
-            if c == ' ' {
-                print!("space ");
-            } else {
-                print!("{} ", c);
-            }
+            print!("{} ", c);
         } else {
             print!("{} ", byte);
         }
     }
-    println!("");
+    print!("\n");
 }
 
 // Panic if the `total' and `file_len' are not equal.
