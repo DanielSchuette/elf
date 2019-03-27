@@ -10,9 +10,11 @@ pub mod prog_header;
 
 use crate::utils::{print_buffer, read_into_buf, validate_read, Config};
 use elf_header::{bits_32, bits_64};
-use prog_header::parse_segment;
+use prog_header::{parse_seg_32_bit, parse_seg_64_bit};
 use std::fs::File;
 use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
 
 pub const ELF_HEADER_LEN: usize = 0x40;
 pub const ELF_MAGIC_NUM: u8 = 0x7f;
@@ -186,7 +188,7 @@ impl ElfHeader {
  * `utils::Config' struct is used to pass around configuration options.
  *
  * | 32 bit | 64 bit | Field Value                                         |
- * | ------ | ------ | --------------------------------------------------- |
+ * + ------ + ------ + --------------------------------------------------- +
  * | 0-3    | 0-3    | Magic number (0x7F and 'ELF' in ASCII)              |
  * | 4      | 4      | 1 (32 bit) or 2 (64 bit)                            |
  * | 5      | 5      | 1 (little endian) or 2 (big endian)                 |
@@ -206,7 +208,7 @@ impl ElfHeader {
  * | 46-47  | 58-59  | Size of entry in section header table               |
  * | 48-49  | 60-61  | Number of entries in section header table           |
  * | 50-51  | 62-63  | Index in section header table with section names    |
- * | ------ | ------ | --------------------------------------------------- |
+ * + ------ + ------ + --------------------------------------------------- +
  */
 pub fn get_elf_header(mut file: &mut File, configs: &Config) -> ElfHeader {
     // set up a byte buffer and a default header struct
@@ -218,6 +220,7 @@ pub fn get_elf_header(mut file: &mut File, configs: &Config) -> ElfHeader {
     // read header bytes into buffer and start parsing
     let bytes = read_into_buf(&mut file, &mut buf);
     validate_read(bytes, ELF_HEADER_LEN);
+
     while offset < buf_size {
         if let Some(inc) = elf_header::parse(&buf, offset, &mut header) {
             offset += inc;
@@ -280,6 +283,10 @@ pub enum ProgHeadFlag {
     Executable,
     Writable,
     Readable,
+    WriteExecutable,
+    ReadExecutable,
+    ReadWritable,
+    ReadWriteExecutable,
 }
 
 impl ProgHeader {
@@ -315,22 +322,26 @@ impl ProgHeadEntry {
  * A sufficiently populated `ElfHeader' is used to parse the program header
  * segments of an ELF file at `file'. Configuration details are passed via
  * `configs'. A `ProgHeader' has an `entr' field which is a vector of segments.
- *
- *
- * prog_tbl_pos: u64,    /* program header table position */
- * prog_size_hentr: u16, /* size of entry in program header */
- * prog_no_hentr: u16,   /* number of entries in program header */
  */
 pub fn get_prog_header(file: &mut File, elf_h: &ElfHeader, _configs: &Config)
                        -> ProgHeader {
+    // prior to read, move the file pointer to an appropriate offset
+    file.seek(SeekFrom::Start(elf_h.prog_tbl_pos))
+        .expect("Failed to seek to header start position");
+
+    // allocate a vector and prog header struct and read data
     let mut buf: Vec<u8> = vec![];
+    let mut prog_h: ProgHeader = ProgHeader::new();
     file.read_to_end(&mut buf)
         .expect("Failed to read from file");
-    let buf = &buf[(elf_h.prog_tbl_pos as usize)..];
-    let mut prog_h: ProgHeader = ProgHeader::new();
 
     for seg in 0..elf_h.prog_no_hentr {
-        parse_segment(&buf, &elf_h, &mut prog_h, seg);
+        if elf_h.platform_bits == PlatformBits::Bits64 {
+            parse_seg_64_bit(&buf, &elf_h, &mut prog_h, seg);
+        }
+        if elf_h.platform_bits == PlatformBits::Bits32 {
+            parse_seg_32_bit();
+        }
     }
 
     prog_h
