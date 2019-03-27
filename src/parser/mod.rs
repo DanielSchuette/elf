@@ -9,7 +9,7 @@ pub mod elf_header;
 pub mod elf_header_32_bit;
 pub mod elf_header_64_bit;
 
-use crate::utils::{print_buffer, read_into_buf, validate_read};
+use crate::utils::{print_buffer, read_into_buf, validate_read, Config};
 
 pub const ELF_HEADER_LEN: usize = 0x40;
 pub const ELF_MAGIC_NUM: u8 = 0x7f;
@@ -156,7 +156,8 @@ impl ElfHeader {
  * platform, and offsets to text and data sections for further parsing). An
  * ELF file header is 64 or 52 bits long, depending on the platform. I.e.
  * the platform must be determined first to then decide how to proceed. It
- * is never necessary to read more than 64 bits into the first buffer.
+ * is never necessary to read more than 64 bits into the first buffer. A
+ * `utils::Config' struct is used to pass around configuration options.
  *
  * | 32 bit | 64 bit | Field Value                                         |
  * | ------ | ------ | --------------------------------------------------- |
@@ -181,7 +182,7 @@ impl ElfHeader {
  * | 50-51  | 62-63  | Index in section header table with section names    |
  * | ------ | ------ | --------------------------------------------------- |
  */
-pub fn get_header(mut file: &mut std::fs::File) -> ElfHeader {
+pub fn get_header(mut file: &mut std::fs::File, configs: &Config) -> ElfHeader {
     // set up a byte buffer and a default header struct
     let mut buf = [0; ELF_HEADER_LEN];
     let mut offset = 0;
@@ -203,8 +204,8 @@ pub fn get_header(mut file: &mut std::fs::File) -> ElfHeader {
         }
     }
 
-    if super::DEBUG {
-        print_buffer(&buf[..]); /* FIXME: will be CLI feature */
+    if configs.debug_mode {
+        print_buffer(&buf[..]);
     }
 
     header

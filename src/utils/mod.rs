@@ -13,6 +13,12 @@ use std::io::Cursor;
 
 use crate::parser;
 
+// Global configuration struct holding information that is shared by subroutines.
+pub struct Config<'a> {
+    pub elf_path: &'a str,
+    pub debug_mode: bool,
+}
+
 /*
  * Read `size' bytes from a `buf' into a cursor for further manipulation, e.g.
  * the conversion into u64. Reading starts at `offset'.
