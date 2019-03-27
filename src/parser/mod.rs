@@ -6,9 +6,13 @@
  * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  */
 pub mod elf_header;
-use elf_header::{bits_32, bits_64};
+pub mod prog_header;
 
 use crate::utils::{print_buffer, read_into_buf, validate_read, Config};
+use elf_header::{bits_32, bits_64};
+use prog_header::parse_segment;
+use std::fs::File;
+use std::io::Read;
 
 pub const ELF_HEADER_LEN: usize = 0x40;
 pub const ELF_MAGIC_NUM: u8 = 0x7f;
@@ -204,7 +208,7 @@ impl ElfHeader {
  * | 50-51  | 62-63  | Index in section header table with section names    |
  * | ------ | ------ | --------------------------------------------------- |
  */
-pub fn get_header(mut file: &mut std::fs::File, configs: &Config) -> ElfHeader {
+pub fn get_elf_header(mut file: &mut File, configs: &Config) -> ElfHeader {
     // set up a byte buffer and a default header struct
     let mut buf = [0; ELF_HEADER_LEN];
     let mut offset = 0;
@@ -231,4 +235,103 @@ pub fn get_header(mut file: &mut std::fs::File, configs: &Config) -> ElfHeader {
     }
 
     header
+}
+
+// Program header struct.
+#[derive(Debug)]
+pub struct ProgHeader {
+    entr: Vec<ProgHeadEntry>, /* final size=ElfHeader.prog_no_hentr */
+}
+
+#[derive(Debug)]
+pub struct ProgHeadEntry {
+    s_type: ProgSegmentType,
+    flags: ProgHeadFlag,
+
+    d_off: u64,    /* file offset of data for segment */
+    v_addr: u64,   /* where to put segment in virtual memory */
+    p_addr: u64,   /* physical address, not relevant for System V ABI */
+    f_size: u64,   /* size of segment in file */
+    mem_size: u64, /* size of segment in memory */
+    align: u64,    /* required alignment as a power of 2 */
+}
+
+#[derive(Debug)]
+pub enum ProgSegmentType {
+    /*
+     * Loadable   - clear mem_size bytes at v_addr to 0, then copy f_size
+     *              bytes from d_off to v_addr
+     * InterpInfo - contains a file path to an executable to use as an
+     *              interpreter for the following segment
+     */
+    EntryUnused, /* unused program header table entry, ignore */
+    Loadable,    /* loadable segment */
+    DynLinkInfo, /* dynamic linking information */
+    InterpInfo,  /* interpreter information */
+    AuxInfo,     /* auxiliary information */
+    Reserved,
+    ProgHeader,  /* segment containing a program header table */
+    OSReserved,  /* reserved range for operating system, incl. 2 vals */
+    CPUReserved, /* reserved range for processor, incl. 2 vals */
+}
+
+#[derive(Debug)]
+pub enum ProgHeadFlag {
+    Executable,
+    Writable,
+    Readable,
+}
+
+impl ProgHeader {
+    // Create a new, empty struct.
+    pub fn new() -> ProgHeader {
+        let entr: Vec<ProgHeadEntry> = vec![];
+        ProgHeader { entr }
+    }
+
+    // Pretty-print header segments.
+    pub fn print(&self) {
+        println!("Program header segments:");
+        for (i, e) in self.entr.iter().enumerate() {
+            println!("No {}: {:#?}", i, e);
+        }
+    }
+}
+
+impl ProgHeadEntry {
+    pub fn new() -> ProgHeadEntry {
+        ProgHeadEntry { s_type: ProgSegmentType::EntryUnused,
+                        flags: ProgHeadFlag::Executable,
+                        d_off: 0,
+                        v_addr: 0,
+                        p_addr: 0,
+                        f_size: 0,
+                        mem_size: 0,
+                        align: 0 }
+    }
+}
+
+/*
+ * A sufficiently populated `ElfHeader' is used to parse the program header
+ * segments of an ELF file at `file'. Configuration details are passed via
+ * `configs'. A `ProgHeader' has an `entr' field which is a vector of segments.
+ *
+ *
+ * prog_tbl_pos: u64,    /* program header table position */
+ * prog_size_hentr: u16, /* size of entry in program header */
+ * prog_no_hentr: u16,   /* number of entries in program header */
+ */
+pub fn get_prog_header(file: &mut File, elf_h: &ElfHeader, _configs: &Config)
+                       -> ProgHeader {
+    let mut buf: Vec<u8> = vec![];
+    file.read_to_end(&mut buf)
+        .expect("Failed to read from file");
+    let buf = &buf[(elf_h.prog_tbl_pos as usize)..];
+    let mut prog_h: ProgHeader = ProgHeader::new();
+
+    for seg in 0..elf_h.prog_no_hentr {
+        parse_segment(&buf, &elf_h, &mut prog_h, seg);
+    }
+
+    prog_h
 }

@@ -20,7 +20,7 @@ const PARSE_LIMIT_MAX: usize = 23;
  * handled by this function, `None' is returned. Otherwise, an `Option<usize>'
  * is returned which can be used by the caller to increment `offset' and call
  * `parse' again. The platform-dependent sections of an ELF header are handled
- * by `parse' functions in `./elf_header_32/64_bit.rs'.
+ * by `parse' functions in mods `bits_32' and `bits_64'.
  */
 pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
              -> Option<usize> {
@@ -184,10 +184,9 @@ pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
 }
 
 pub mod bits_32 {
-
     /*
-     * `elf_header_32_bit.rs' parses the platform-specific parts of the ELF header
-     * if a 32-bit file is detected.
+     * Parses the platform-specific parts of the ELF header if a 32-bit file is
+     * detected.
      */
     use crate::parser;
     use crate::utils;
@@ -304,8 +303,8 @@ pub mod bits_32 {
 
 pub mod bits_64 {
     /*
-     * `elf_header_64_bit.rs' parses the platform-specific parts of the ELF header
-     * if a 64-bit file is detected.
+     * Parses the platform-specific parts of the ELF header if a 64-bit file is
+     * detected.
      */
     use crate::parser;
     use crate::utils;

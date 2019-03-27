@@ -17,6 +17,7 @@ use crate::parser;
 pub struct Config<'a> {
     pub elf_path: &'a str,
     pub debug_mode: bool,
+    pub print_header: bool,
 }
 
 /*

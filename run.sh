@@ -13,18 +13,18 @@ cd data/ && make && cd ../ || exit 1
 # run test files
 if [ "$1" = '--obj' ]; then
     if [ "$2" = '--b32' ]; then
-        cargo run -- --debug --path data/elf_32bit.o || fail
+        cargo run -- -e -p data/elf_32bit.o || fail
         SUCCESS=true
     elif [ "$2" = '--b64' ]; then
-        cargo run -- --debug --path data/elf_64bit.o || fail
+        cargo run -- -e -p data/elf_64bit.o || fail
         SUCCESS=true
     fi
 elif [ "$1" = '--bin' ]; then
     if [ "$2" = '--b32' ]; then
-        cargo run -- --debug --path data/elf_32bit || fail
+        cargo run -- -e -p data/elf_32bit || fail
         SUCCESS=true
     elif [ "$2" = '--b64' ]; then
-        cargo run -- --debug --path data/elf_64bit || fail
+        cargo run -- -e -p data/elf_64bit || fail
         SUCCESS=true
     fi
 fi
@@ -32,7 +32,7 @@ fi
 # take default action
 if [ "$SUCCESS" = 'false' ]; then
     echo 'Running default (64-bit executable file)'
-    cargo run -- --debug --path data/elf_64bit || fail
+    cargo run -- -e -p data/elf_64bit || fail
 fi
 
 # update dependency graph and clean up `data/'
