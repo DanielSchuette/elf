@@ -536,7 +536,7 @@ pub fn get_prog_header(file: &mut File, elf_h: &ElfHeader, _configs: &Config)
             parse_seg_64_bit(&buf, &elf_h, &mut prog_h, seg);
         }
         if elf_h.platform_bits == PlatformBits::Bits32 {
-            parse_seg_32_bit();
+            parse_seg_32_bit(&buf, &elf_h, &mut prog_h, seg);
         }
     }
 
