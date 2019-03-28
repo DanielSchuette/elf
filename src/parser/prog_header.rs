@@ -123,5 +123,7 @@ pub fn parse_seg_64_bit(buf: &[u8], elf_h: &parser::ElfHeader,
     prog_h.entr.push(entr);
 }
 
-// 32-bit equivalent of `parse_seg_32_bit'.
-pub fn parse_seg_32_bit() {}
+// 32-bit equivalent of `parse_seg_32_bit'. TODO: implement.
+pub fn parse_seg_32_bit() {
+    panic!("`parse_seg_32_bit' is not implemented.");
+}

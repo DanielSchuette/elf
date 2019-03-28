@@ -156,11 +156,13 @@ pub fn parse(buf: &[u8], offset: usize, header: &mut parser::ElfHeader)
                 0x03 => parser::InstructionSet::X86,
                 0x08 => parser::InstructionSet::MIPS,
                 0x14 => parser::InstructionSet::PowerPC,
+                0x16 => parser::InstructionSet::S390,
                 0x28 => parser::InstructionSet::ARM,
                 0x2a => parser::InstructionSet::SuperH,
                 0x32 => parser::InstructionSet::IA64,
                 0x3e => parser::InstructionSet::X86_64,
                 0xb7 => parser::InstructionSet::AArch64,
+                0xf3 => parser::InstructionSet::RISCV,
                 _ => {
                     let err =
                         format!("Cannot interpret unknown instruction set code {}",

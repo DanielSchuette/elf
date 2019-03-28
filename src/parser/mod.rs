@@ -11,6 +11,7 @@ pub mod prog_header;
 use crate::utils::{print_buffer, read_into_buf, validate_read, Config};
 use elf_header::{bits_32, bits_64};
 use prog_header::{parse_seg_32_bit, parse_seg_64_bit};
+use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::io::Seek;
@@ -24,21 +25,61 @@ pub const FIELD_SIZE_16: usize = 2;
 pub const FIELD_SIZE_32: usize = 4;
 pub const FIELD_SIZE_64: usize = 8;
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum PlatformBits {
     Bits64,
     Bits32,
     Unknown,
 }
 
-#[derive(Debug)]
+impl fmt::Display for PlatformBits {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(width) = f.width() {
+            match self {
+                PlatformBits::Bits32 => {
+                    return write!(f, "{:>w$}", "32 bits", w = width)
+                }
+                PlatformBits::Bits64 => {
+                    return write!(f, "{:>w$}", "64 bits", w = width)
+                }
+                _ => return write!(f, "{:>w$}", "error", w = width),
+            }
+        } else {
+            match self {
+                PlatformBits::Bits32 => return write!(f, "32 bits"),
+                PlatformBits::Bits64 => return write!(f, "64 bits"),
+                _ => return write!(f, "error"),
+            }
+        };
+    }
+}
+
 pub enum Endianness {
     Little,
     Big,
     Unknown,
 }
 
-#[derive(Debug)]
+impl fmt::Display for Endianness {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(width) = f.width() {
+            match self {
+                Endianness::Little => {
+                    return write!(f, "{:>w$}", "little", w = width)
+                }
+                Endianness::Big => return write!(f, "{:>w$}", "big", w = width),
+                _ => return write!(f, "{:>w$}", "error", w = width),
+            }
+        } else {
+            match self {
+                Endianness::Little => return write!(f, "little"),
+                Endianness::Big => return write!(f, "big"),
+                _ => return write!(f, "error"),
+            }
+        };
+    }
+}
+
 pub enum ElfType {
     Relocatable,
     Executable,
@@ -47,18 +88,101 @@ pub enum ElfType {
     Unknown,
 }
 
-#[derive(Debug)]
+impl fmt::Display for ElfType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(width) = f.width() {
+            match self {
+                ElfType::Relocatable => {
+                    return write!(f, "{:>w$}", "relocatable", w = width)
+                }
+                ElfType::Executable => {
+                    return write!(f, "{:>w$}", "executable", w = width)
+                }
+                ElfType::Shared => return write!(f, "{:>w$}", "shared", w = width),
+                ElfType::Core => return write!(f, "{:>w$}", "core", w = width),
+                _ => return write!(f, "{:>w$}", "error", w = width),
+            }
+        } else {
+            match self {
+                ElfType::Relocatable => return write!(f, "relocatable"),
+                ElfType::Executable => return write!(f, "executable"),
+                ElfType::Shared => return write!(f, "shared"),
+                ElfType::Core => return write!(f, "core"),
+                _ => return write!(f, "error"),
+            }
+        };
+    }
+}
+
 pub enum InstructionSet {
     NoSpecific,
     Sparc,
     X86,
     MIPS,
     PowerPC,
+    S390,
     ARM,
     SuperH,
     IA64,
     X86_64,
     AArch64,
+    RISCV,
+}
+
+impl fmt::Display for InstructionSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(width) = f.width() {
+            match self {
+                InstructionSet::NoSpecific => {
+                    return write!(f, "{:>w$}", "no specific", w = width)
+                }
+                InstructionSet::Sparc => {
+                    return write!(f, "{:>w$}", "Sparc", w = width)
+                }
+                InstructionSet::X86 => return write!(f, "{:>w$}", "x86", w = width),
+                InstructionSet::MIPS => {
+                    return write!(f, "{:>w$}", "MIPS", w = width)
+                }
+                InstructionSet::PowerPC => {
+                    return write!(f, "{:>w$}", "Power PC", w = width)
+                }
+                InstructionSet::S390 => {
+                    return write!(f, "{:>w$}", "S390", w = width)
+                }
+                InstructionSet::ARM => return write!(f, "{:>w$}", "Arm", w = width),
+                InstructionSet::SuperH => {
+                    return write!(f, "{:>w$}", "Super H", w = width)
+                }
+                InstructionSet::IA64 => {
+                    return write!(f, "{:>w$}", "IA-64", w = width)
+                }
+                InstructionSet::X86_64 => {
+                    return write!(f, "{:>w$}", "x86-64", w = width)
+                }
+                InstructionSet::AArch64 => {
+                    return write!(f, "{:>w$}", "AArch64", w = width)
+                }
+                InstructionSet::RISCV => {
+                    return write!(f, "{:>w$}", "RISC-V", w = width)
+                }
+            }
+        } else {
+            match self {
+                InstructionSet::NoSpecific => return write!(f, "no specific"),
+                InstructionSet::Sparc => return write!(f, "Sparc"),
+                InstructionSet::X86 => return write!(f, "x86"),
+                InstructionSet::MIPS => return write!(f, "MIPS"),
+                InstructionSet::PowerPC => return write!(f, "Power PC"),
+                InstructionSet::S390 => return write!(f, "S390"),
+                InstructionSet::ARM => return write!(f, "Arm"),
+                InstructionSet::SuperH => return write!(f, "Super H"),
+                InstructionSet::IA64 => return write!(f, "IA64"),
+                InstructionSet::X86_64 => return write!(f, "x86-64"),
+                InstructionSet::AArch64 => return write!(f, "AArch64"),
+                InstructionSet::RISCV => return write!(f, "RISC-V"),
+            }
+        };
+    }
 }
 
 #[derive(Debug)]
@@ -81,6 +205,78 @@ pub enum TargetABI {
     AROS,
     FenixOS,
     CloudABI,
+}
+
+impl fmt::Display for TargetABI {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(width) = f.width() {
+            match self {
+                TargetABI::NoSpecific => {
+                    return write!(f, "{:>w$}", "no specific", w = width)
+                }
+                TargetABI::SystemV => {
+                    return write!(f, "{:>w$}", "System V", w = width)
+                }
+                TargetABI::HPUX => return write!(f, "{:>w$}", "HP-UX", w = width),
+                TargetABI::NetBSD => {
+                    return write!(f, "{:>w$}", "NetBSD", w = width)
+                }
+                TargetABI::Linux => return write!(f, "{:>w$}", "Linux", w = width),
+                TargetABI::GNUHurd => {
+                    return write!(f, "{:>w$}", "GNU Hurd", w = width)
+                }
+                TargetABI::Solaris => {
+                    return write!(f, "{:>w$}", "Solaris", w = width)
+                }
+                TargetABI::AIX => return write!(f, "{:>w$}", "AIX", w = width),
+                TargetABI::IRIX => return write!(f, "{:>w$}", "IRIX", w = width),
+                TargetABI::FreeBSD => {
+                    return write!(f, "{:>w$}", "FreeBSD", w = width)
+                }
+                TargetABI::Tru64 => return write!(f, "{:>w$}", "Tru64", w = width),
+                TargetABI::NovellModesto => {
+                    return write!(f, "{:>w$}", "Novell Modesto", w = width)
+                }
+                TargetABI::OpenBSD => {
+                    return write!(f, "{:>w$}", "OpenBSD", w = width)
+                }
+                TargetABI::OpenVMS => {
+                    return write!(f, "{:>w$}", "OpenVMS", w = width)
+                }
+                TargetABI::NonStop => {
+                    return write!(f, "{:>w$}", "NonStop Kernel", w = width)
+                }
+                TargetABI::AROS => return write!(f, "{:>w$}", "AROS", w = width),
+                TargetABI::FenixOS => {
+                    return write!(f, "{:>w$}", "Fenix OS", w = width)
+                }
+                TargetABI::CloudABI => {
+                    return write!(f, "{:>w$}", "CloudABI", w = width)
+                }
+            }
+        } else {
+            match self {
+                TargetABI::NoSpecific => return write!(f, "no specific"),
+                TargetABI::SystemV => return write!(f, "System V"),
+                TargetABI::HPUX => return write!(f, "HP-UX"),
+                TargetABI::NetBSD => return write!(f, "NetBSD"),
+                TargetABI::Linux => return write!(f, "Linux"),
+                TargetABI::GNUHurd => return write!(f, "GNU Hurd"),
+                TargetABI::Solaris => return write!(f, "Solaris"),
+                TargetABI::AIX => return write!(f, "AIX"),
+                TargetABI::IRIX => return write!(f, "IRIX"),
+                TargetABI::FreeBSD => return write!(f, "FreeBSD"),
+                TargetABI::Tru64 => return write!(f, "Tru64"),
+                TargetABI::NovellModesto => return write!(f, "Novell Modesto"),
+                TargetABI::OpenBSD => return write!(f, "OpenBSD"),
+                TargetABI::OpenVMS => return write!(f, "OpenVMS"),
+                TargetABI::NonStop => return write!(f, "NonStop Kernel"),
+                TargetABI::AROS => return write!(f, "AROS"),
+                TargetABI::FenixOS => return write!(f, "Fenix OS"),
+                TargetABI::CloudABI => return write!(f, "CloudABI"),
+            }
+        };
+    }
 }
 
 // Header data is parsed into and available through this struct.
@@ -148,34 +344,34 @@ impl ElfHeader {
 
     // Pretty-print struct as a table, mainly for debugging.
     pub fn print(&self) {
-        println!("+-----------------------------------------------+---------------+");
-        println!("| File size\t\t\t\t\t| {:?}\t\t|", self.file_size);
-        println!("| Platform\t\t\t\t\t| {:?}\t|", self.platform_bits);
-        println!("| Endianness\t\t\t\t\t| {:?}\t|", self.endianness);
-        println!("| ELF version\t\t\t\t\t| {:?}\t\t|", self.version);
-        println!("| Header version\t\t\t\t| {:?}\t\t|", self.header_version);
-        println!("| Operating System ABI\t\t\t\t| {:?}\t|", self.abi);
-        println!("| Type\t\t\t\t\t\t| {:?}\t|", self.elf_type);
-        println!("| Instruction set\t\t\t\t| {:?}\t|", self.instruction_set);
-        println!("| Flags\t\t\t\t\t\t| {:?}\t\t|", self.flags);
-        println!("| Header size\t\t\t\t\t| {:?}\t\t|", self.header_size);
-        println!("| Program entry position\t\t\t| {:?}\t|",
+        println!("+-----------------------------------------------+--------------------+");
+        println!("| File size\t\t\t\t\t| {:18?} |", self.file_size);
+        println!("| Platform\t\t\t\t\t| {:18} |", self.platform_bits);
+        println!("| Endianness\t\t\t\t\t| {:18} |", self.endianness);
+        println!("| ELF version\t\t\t\t\t| {:18?} |", self.version);
+        println!("| Header version\t\t\t\t| {:18?} |", self.header_version);
+        println!("| Operating system ABI\t\t\t\t| {:18} |", self.abi);
+        println!("| Type\t\t\t\t\t\t| {:18} |", self.elf_type);
+        println!("| Instruction set\t\t\t\t| {:18} |", self.instruction_set);
+        println!("| Flags\t\t\t\t\t\t| {:18?} |", self.flags);
+        println!("| Header size\t\t\t\t\t| {:18?} |", self.header_size);
+        println!("| Program entry position\t\t\t| {:18?} |",
                  self.prog_entry_pos);
-        println!("| Program header table position\t\t\t| {:?}\t\t|",
+        println!("| Program header table position\t\t\t| {:18?} |",
                  self.prog_tbl_pos);
-        println!("| Section header table position\t\t\t| {:?}\t\t|",
+        println!("| Section header table position\t\t\t| {:18?} |",
                  self.sec_tbl_pos);
-        println!("| Program header entry size\t\t\t| {:?}\t\t|",
+        println!("| Program header entry size\t\t\t| {:18?} |",
                  self.prog_size_hentr);
-        println!("| Number of program header entries\t\t| {:?}\t\t|",
+        println!("| Number of program header entries\t\t| {:18?} |",
                  self.prog_no_hentr);
-        println!("| Section header entry size\t\t\t| {:?}\t\t|",
+        println!("| Section header entry size\t\t\t| {:18?} |",
                  self.sec_size_hentr);
-        println!("| Number of section header entries\t\t| {:?}\t\t|",
+        println!("| Number of section header entries\t\t| {:18?} |",
                  self.sec_no_entr);
-        println!("| Index of section names in section header\t| {:?}\t\t|",
+        println!("| Index of section names in section header\t| {:18?} |",
                  self.sec_tbl_names_pos);
-        println!("+-----------------------------------------------+---------------+");
+        println!("+-----------------------------------------------+--------------------+");
     }
 }
 
