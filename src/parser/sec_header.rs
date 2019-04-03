@@ -6,3 +6,6 @@
  * Author: Daniel Schuette (d.schuette@online.de)
  * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  */
+pub fn parse_seg_64_bit() {}
+
+pub fn parse_seg_32_bit() {}

@@ -5,7 +5,7 @@
  * License: MIT (see LICENSE.md at https://github.com/DanielSchuette/elf)
  *
  * Dev logs:
- * TODO: Parse program header.
+ * TODO: Pretty-print prog header table (see `readelf' util).
  * TODO: Parse section header.
  * TODO: Parse and print data section.
  * TODO: Parse and print text section (symbol table?).
@@ -75,10 +75,12 @@ fn main() {
         elf_h.print();
     }
 
-    // parse and print program header table
+    // parse and print program header table segments
     let prog_h = get_prog_header(&mut f, &elf_h, &configs);
 
     if configs.print_header {
         prog_h.print();
     }
+
+    // TODO: parse and print section header table segments
 }

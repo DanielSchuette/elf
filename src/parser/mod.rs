@@ -7,10 +7,10 @@
  */
 pub mod elf_header;
 pub mod prog_header;
+pub mod sec_header;
 
 use crate::utils::{print_buffer, read_into_buf, validate_read, Config};
 use elf_header::{bits_32, bits_64};
-use prog_header::{parse_seg_32_bit, parse_seg_64_bit};
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
@@ -533,12 +533,39 @@ pub fn get_prog_header(file: &mut File, elf_h: &ElfHeader, _configs: &Config)
 
     for seg in 0..elf_h.prog_no_hentr {
         if elf_h.platform_bits == PlatformBits::Bits64 {
-            parse_seg_64_bit(&buf, &elf_h, &mut prog_h, seg);
+            prog_header::parse_seg_64_bit(&buf, &elf_h, &mut prog_h, seg);
         }
         if elf_h.platform_bits == PlatformBits::Bits32 {
-            parse_seg_32_bit(&buf, &elf_h, &mut prog_h, seg);
+            prog_header::parse_seg_32_bit(&buf, &elf_h, &mut prog_h, seg);
         }
     }
 
     prog_h
+}
+
+/*
+ * TODO: Documentation.
+ */
+pub fn get_sec_header(file: &mut File, elf_h: &ElfHeader, _configs: &Config)
+                      -> SecHeader {
+    // prior to read, move the file pointer to an appropriate offset
+    //file.seek(SeekFrom::Start(elf_h.prog_tbl_pos))
+    //    .expect("Failed to seek to header start position");
+
+    // allocate a vector and prog header struct and read data
+    //let mut buf: Vec<u8> = vec![];
+    //let mut prog_h: ProgHeader = ProgHeader::new();
+    //file.read_to_end(&mut buf)
+    //    .expect("Failed to read from file");
+
+    //for seg in 0..elf_h.prog_no_hentr {
+    //    if elf_h.platform_bits == PlatformBits::Bits64 {
+    //        prog_header::parse_seg_64_bit(&buf, &elf_h, &mut prog_h, seg);
+    //    }
+    //    if elf_h.platform_bits == PlatformBits::Bits32 {
+    //        prog_header::parse_seg_32_bit(&buf, &elf_h, &mut prog_h, seg);
+    //    }
+    //}
+
+    //prog_h
 }

@@ -20,7 +20,7 @@ pub fn parse_seg_64_bit(buf: &[u8], elf_h: &parser::ElfHeader,
     for off in start..end {
         match field {
             0x00 => {
-                let field_size = 4;
+                let field_size = 0x04;
                 let mut reader =
                     utils::read_bytes_into_cursor(buf, off as usize, field_size);
                 let entry = utils::unwrap_endian_u32(elf_h, &mut reader);
@@ -42,7 +42,7 @@ pub fn parse_seg_64_bit(buf: &[u8], elf_h: &parser::ElfHeader,
                 entr.s_type = val;
             }
             0x04 => {
-                let field_size = 4;
+                let field_size = 0x04;
                 let mut reader =
                     utils::read_bytes_into_cursor(buf, off as usize, field_size);
                 let entry = utils::unwrap_endian_u32(elf_h, &mut reader);
@@ -62,7 +62,7 @@ pub fn parse_seg_64_bit(buf: &[u8], elf_h: &parser::ElfHeader,
                 entr.flags = val;
             }
             0x08 => {
-                let field_size = 8;
+                let field_size = 0x08;
                 let mut reader =
                     utils::read_bytes_into_cursor(buf, off as usize, field_size);
                 let val = utils::unwrap_endian_u64(elf_h, &mut reader);
